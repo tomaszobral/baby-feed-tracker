@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Baby Feed Tracker</title>
+
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Karmienie" />
+  <meta name="theme-color" content="#2d6a2a" />
+  <meta name="mobile-web-app-capable" content="yes" />
+
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%232d6a2a'/%3E%3Ctext y='120' x='90' font-size='90' text-anchor='middle'%3E%F0%9F%8D%BC%3C/text%3E%3C/svg%3E" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232d6a2a'/%3E%3Ctext y='24' x='16' font-size='20' text-anchor='middle'%3E%F0%9F%8D%BC%3C/text%3E%3C/svg%3E" />
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Georgia', serif;
+      background: #fdf8f3;
+      min-height: 100vh;
+      min-height: 100dvh;
+      padding-bottom: env(safe-area-inset-bottom, 20px);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* ── LOGIN SCREEN ── */
+    #login-screen {
+      display: none;
+      max-width: 380px;
+      margin: 0 auto;
+      padding: 60px 24px 40px;
+      text-align: center;
+    }
+    #login-screen.visible { display: block; }
+    .login-icon { font-size: 64px; margin-bottom: 16px; }
+    .login-title { font-size: 24px; font-weight: bold; color: #2d1f0e; margin-bottom: 8px; }
+    .login-sub { font-size: 14px; color: #a08060; margin-bottom: 32px; line-height: 1.6; }
+    .login-input {
+      width: 100%;
+      font-size: 17px;
+      border: 2px solid #e8dfd0;
+      border-radius: 12px;
+      padding: 12px 16px;
+      background: #fff;
+      outline: none;
+      font-family: 'Georgia', serif;
+      margin-bottom: 12px;
+    }
+    .login-input:focus { border-color: #2d6a2a; }
+    .login-btn {
+      width: 100%;
+      padding: 14px;
+      background: #2d6a2a;
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 17px;
+      font-weight: bold;
+      cursor: pointer;
+      font-family: 'Georgia', serif;
+    }
+    .login-btn:disabled { opacity: 0.5; }
+    .login-msg {
+      margin-top: 16px;
+      font-size: 14px;
+      line-height: 1.6;
+      min-height: 40px;
+    }
+    .login-msg.ok { color: #2d6a2a; }
+    .login-msg.err { color: #cc3030; }
+
+    /* ── MAIN APP ── */
+    #app { display: none; max-width: 480px; margin: 0 auto; padding-bottom: 80px; }
+    #app.visible { display: block; }
+
+    header {
+      background: #fff;
+      padding: 18px 20px 14px;
+      padding-top: calc(18px + env(safe-area-inset-top, 0px));
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      border-bottom: 1px solid #ede8e0;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .header-icon { font-size: 36px; }
+    .header-title { font-size: 20px; font-weight: bold; color: #2d1f0e; }
+    .header-sub { font-size: 11px; color: #a08060; margin-top: 2px; }
+    .sync-status { font-size: 11px; margin-top: 3px; }
+    .sync-ok { color: #2d6a2a; }
+    .sync-err { color: #cc3030; }
+    .sync-loading { color: #a08060; }
+    .header-actions { display: flex; gap: 4px; margin-left: auto; }
+    .icon-btn { background: none; border: none; font-size: 20px; cursor: pointer; padding: 4px 6px; border-radius: 8px; }
+
+    .card {
+      background: #fff;
+      margin: 16px 16px 0;
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    }
+
+    .auto-date {
+      background: #f0faf0;
+      border: 1px solid #b8e0b8;
+      border-radius: 8px;
+      padding: 7px 12px;
+      font-size: 13px;
+      color: #2a6a2a;
+      margin-bottom: 12px;
+      font-family: monospace;
+      display: none;
+    }
+    .auto-date.visible { display: block; }
+
+    label { display: block; font-size: 13px; color: #7a6040; margin-bottom: 5px; font-weight: bold; }
+
+    input[type=number] {
+      width: 100%;
+      font-size: 28px;
+      font-weight: bold;
+      color: #2d1f0e;
+      border: 2px solid #e8dfd0;
+      border-radius: 10px;
+      padding: 8px 14px;
+      background: #fdf8f3;
+      outline: none;
+      -webkit-appearance: none;
+      margin-bottom: 12px;
+    }
+    input[type=number]:focus { border-color: #2d6a2a; }
+
+    .toggle-row { display: flex; gap: 10px; margin-bottom: 14px; }
+    .toggle {
+      flex: 1; padding: 12px 8px; border-radius: 10px;
+      border: 2px solid #e0d4c0; background: #fdf8f3;
+      font-size: 15px; cursor: pointer; color: #7a6040;
+      font-weight: bold; font-family: 'Georgia', serif; transition: all 0.15s;
+    }
+    .toggle.on-blue { background: #d0f0ff; border-color: #5aaedc; color: #1a6090; }
+    .toggle.on-brown { background: #f5e6c8; border-color: #c8962a; color: #7a4a10; }
+
+    .add-btn {
+      width: 100%; padding: 14px; background: #2d6a2a; color: #fff;
+      border: none; border-radius: 12px; font-size: 17px; font-weight: bold;
+      cursor: pointer; font-family: 'Georgia', serif; transition: opacity 0.15s;
+    }
+    .add-btn:disabled { opacity: 0.4; }
+    .add-btn:active { opacity: 0.8; }
+
+    .entries { padding: 0 16px; }
+
+    .date-header {
+      font-size: 13px; font-weight: bold; color: #a08060;
+      text-transform: uppercase; letter-spacing: 1px;
+      margin-top: 20px; margin-bottom: 6px;
+      padding-bottom: 4px; border-bottom: 1px solid #e8dfd0;
+    }
+
+    .entry-row {
+      display: flex; align-items: center; background: #fff;
+      border-radius: 10px; padding: 10px 12px; margin-bottom: 6px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.04); gap: 8px;
+    }
+    .entry-time { font-size: 15px; font-weight: bold; color: #2d1f0e; min-width: 48px; font-family: monospace; }
+    .entry-details { flex: 1; display: flex; flex-wrap: wrap; gap: 5px; }
+
+    .chip { background: #f0f8ff; border: 1px solid #b0d8f0; border-radius: 6px; padding: 2px 8px; font-size: 13px; color: #1a5070; font-weight: bold; }
+    .chip-blue { background: #e8f4ff; border: 1px solid #90c4e8; border-radius: 6px; padding: 2px 8px; font-size: 13px; color: #1a5090; }
+    .chip-brown { background: #fdf0d8; border: 1px solid #d4a850; border-radius: 6px; padding: 2px 8px; font-size: 13px; color: #7a4a10; }
+
+    .delete-btn { background: none; border: none; color: #c09070; font-size: 14px; cursor: pointer; padding: 4px 6px; border-radius: 6px; }
+
+    .summary { font-size: 12px; color: #a08060; text-align: right; padding: 4px 4px 8px; font-style: italic; }
+    .empty { text-align: center; color: #b09070; font-size: 15px; padding: 40px 20px; line-height: 1.6; }
+
+    /* ── MODAL ── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45); z-index: 100;
+      align-items: center; justify-content: center; padding: 24px;
+    }
+    .modal-overlay.visible { display: flex; }
+    .modal {
+      background: #fff; border-radius: 18px; padding: 24px 20px 20px;
+      width: 100%; max-width: 320px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.18); text-align: center;
+    }
+    .modal-icon { font-size: 36px; margin-bottom: 10px; }
+    .modal-title { font-size: 17px; font-weight: bold; color: #2d1f0e; margin-bottom: 6px; }
+    .modal-sub { font-size: 13px; color: #a08060; margin-bottom: 20px; line-height: 1.5; }
+    .modal-entry-preview {
+      background: #fdf8f3; border: 1px solid #e8dfd0; border-radius: 10px;
+      padding: 8px 14px; font-size: 13px; color: #5a4030; margin-bottom: 20px; font-family: monospace;
+    }
+    .modal-buttons { display: flex; gap: 10px; }
+    .modal-cancel {
+      flex: 1; padding: 12px; border-radius: 10px; border: 2px solid #e0d4c0;
+      background: #fdf8f3; font-size: 15px; font-weight: bold;
+      cursor: pointer; color: #7a6040; font-family: 'Georgia', serif;
+    }
+    .modal-delete {
+      flex: 1; padding: 12px; border-radius: 10px; border: none;
+      background: #cc3030; color: #fff; font-size: 15px; font-weight: bold;
+      cursor: pointer; font-family: 'Georgia', serif;
+    }
+
+    /* Install banner */
+    #install-banner { display: none; background: #2d6a2a; color: #fff; padding: 10px 16px; font-size: 13px; align-items: center; gap: 10px; }
+    #install-banner.visible { display: flex; }
+    #install-banner .dismiss { background: transparent; border: none; color: rgba(255,255,255,0.8); font-size: 20px; cursor: pointer; padding: 0 4px; }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+  <div class="login-icon">🍼</div>
+  <div class="login-title">Baby Feed Tracker</div>
+  <div class="login-sub">Zaloguj się żeby zobaczyć wpisy.</div>
+  <input class="login-input" type="email" id="login-email" placeholder="Email" autocomplete="email" />
+  <input class="login-input" type="password" id="login-password" placeholder="Hasło" autocomplete="current-password" />
+  <button class="login-btn" id="login-btn" onclick="signIn()">Zaloguj się</button>
+  <div class="login-msg" id="login-msg"></div>
+</div>
+
+<!-- MAIN APP -->
+<div id="install-banner">
+  <span style="flex:1">📱 Safari → ⬆️ → "Dodaj do ekranu głównego"</span>
+  <button class="dismiss" onclick="this.parentElement.style.display='none'">✕</button>
+</div>
+
+<div id="app">
+  <header>
+    <div class="header-icon">🍼</div>
+    <div style="flex:1">
+      <div class="header-title">Baby Feed Tracker</div>
+      <div class="sync-status sync-loading" id="sync-status">⟳ łączenie...</div>
+    </div>
+    <div class="header-actions">
+      <button class="icon-btn" onclick="loadEntries()" title="Odśwież">↻</button>
+      <button class="icon-btn" onclick="signOut()" title="Wyloguj">🚪</button>
+    </div>
+  </header>
+
+  <div class="card">
+    <div class="auto-date" id="auto-date"></div>
+    <div>
+      <label>🍼 Mleko (ml)</label>
+      <input type="number" inputmode="numeric" pattern="[0-9]*" placeholder="np. 120" id="mleko-input" />
+    </div>
+    <div class="toggle-row">
+      <button class="toggle" id="siku-btn" onclick="toggleSiku()">💧 Siku</button>
+      <button class="toggle" id="kupka-btn" onclick="toggleKupka()">💩 Kupka</button>
+    </div>
+    <button class="add-btn" id="add-btn" onclick="addEntry()" disabled>+ Dodaj wpis</button>
+  </div>
+
+  <div class="entries" id="entries-list">
+    <div class="empty">⟳ Ładowanie wpisów...</div>
+  </div>
+</div>
+
+<!-- DELETE MODAL -->
+<div class="modal-overlay" id="delete-modal">
+  <div class="modal">
+    <div class="modal-icon">🗑️</div>
+    <div class="modal-title">Usunąć wpis?</div>
+    <div class="modal-sub">Tej operacji nie można cofnąć.</div>
+    <div class="modal-entry-preview" id="modal-entry-preview"></div>
+    <div class="modal-buttons">
+      <button class="modal-cancel" onclick="closeDeleteModal()">Anuluj</button>
+      <button class="modal-delete" onclick="confirmDelete()">Usuń</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const SUPABASE_URL = "https://dimddilaegqqfwsgxelk.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_zFtj7pH5Lm_3wl2-DbKWmg_Ykj6kEXx";
+  const { createClient } = supabase;
+  const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  // ── AUTH ──
+  async function init() {
+    // Handle magic link token in URL
+    const { data: { session } } = await db.auth.getSession();
+    if (session) {
+      showApp();
+    } else {
+      showLogin();
+    }
+
+    // Listen for auth changes
+    db.auth.onAuthStateChange((event, session) => {
+      if (session) {
+        showApp();
+      } else {
+        showLogin();
+      }
+    });
+  }
+
+  function showLogin() {
+    document.getElementById("login-screen").classList.add("visible");
+    document.getElementById("app").classList.remove("visible");
+  }
+
+  function showApp() {
+    document.getElementById("login-screen").classList.remove("visible");
+    document.getElementById("app").classList.add("visible");
+
+    const isStandalone = window.navigator.standalone ||
+      window.matchMedia("(display-mode: standalone)").matches;
+    if (!isStandalone && /iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+      document.getElementById("install-banner").classList.add("visible");
+    }
+
+    loadEntries();
+
+    db.channel("entries-changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "entries" }, () => {
+        loadEntries();
+      })
+      .subscribe();
+  }
+
+  async function signIn() {
+    const email = document.getElementById("login-email").value.trim();
+    const password = document.getElementById("login-password").value;
+    if (!email || !password) return;
+
+    const btn = document.getElementById("login-btn");
+    const msg = document.getElementById("login-msg");
+    btn.disabled = true;
+    btn.textContent = "Loguję...";
+    msg.className = "login-msg";
+    msg.textContent = "";
+
+    const { error } = await db.auth.signInWithPassword({ email, password });
+
+    if (error) {
+      msg.className = "login-msg err";
+      msg.textContent = "Nieprawidłowy email lub hasło.";
+      btn.disabled = false;
+      btn.textContent = "Zaloguj się";
+    }
+  }
+
+  async function signOut() {
+    await db.auth.signOut();
+  }
+
+  // ── ENTRIES ──
+  let entries = [];
+  let pendingTimestamp = null;
+  let sikuOn = false;
+  let kupkaOn = false;
+
+  function setSyncStatus(state, msg) {
+    const el = document.getElementById("sync-status");
+    el.className = "sync-status sync-" + state;
+    el.textContent = msg;
+  }
+
+  async function loadEntries() {
+    setSyncStatus("loading", "⟳ synchronizacja...");
+    const { data, error } = await db
+      .from("entries")
+      .select("*")
+      .order("timestamp", { ascending: false });
+
+    if (error) {
+      setSyncStatus("err", "✕ błąd połączenia");
+      return;
+    }
+    entries = data || [];
+    setSyncStatus("ok", "✓ zsynchronizowano");
+    renderEntries();
+  }
+
+  async function addEntry() {
+    const mlVal = document.getElementById("mleko-input").value;
+    if (!mlVal && !sikuOn && !kupkaOn) return;
+
+    const addBtn = document.getElementById("add-btn");
+    addBtn.disabled = true;
+    addBtn.textContent = "Zapisuję...";
+
+    const entry = {
+      timestamp: pendingTimestamp || new Date().toISOString(),
+      mleko: mlVal ? parseInt(mlVal) : null,
+      siku: sikuOn,
+      kupka: kupkaOn,
+    };
+
+    const { data, error } = await db.from("entries").insert([entry]).select();
+
+    if (error) {
+      setSyncStatus("err", "✕ błąd zapisu");
+      addBtn.disabled = false;
+      addBtn.textContent = "+ Dodaj wpis";
+      return;
+    }
+
+    document.getElementById("mleko-input").value = "";
+    sikuOn = false; kupkaOn = false; pendingTimestamp = null;
+    document.getElementById("siku-btn").className = "toggle";
+    document.getElementById("siku-btn").textContent = "💧 Siku";
+    document.getElementById("kupka-btn").className = "toggle";
+    document.getElementById("kupka-btn").textContent = "💩 Kupka";
+    document.getElementById("auto-date").classList.remove("visible");
+    addBtn.textContent = "+ Dodaj wpis";
+    updateAddBtn();
+
+    setSyncStatus("ok", "✓ zapisano");
+    entries.unshift(data[0]);
+    renderEntries();
+    document.getElementById("mleko-input").focus();
+  }
+
+  // ── DELETE MODAL ──
+  let pendingDeleteId = null;
+
+  function deleteEntry(id) {
+    pendingDeleteId = id;
+    const entry = entries.find(e => e.id === id);
+    if (!entry) return;
+    const time = formatTime(entry.timestamp);
+    const day = new Date(entry.timestamp).toLocaleDateString("pl-PL", { weekday: "long", day: "numeric", month: "long" });
+    const parts = [];
+    if (entry.mleko != null) parts.push(`🍼 ${entry.mleko} ml`);
+    if (entry.siku) parts.push("💧 Siku");
+    if (entry.kupka) parts.push("💩 Kupka");
+    document.getElementById("modal-entry-preview").textContent = `${day}, ${time} — ${parts.join(" · ")}`;
+    document.getElementById("delete-modal").classList.add("visible");
+  }
+
+  function closeDeleteModal() {
+    pendingDeleteId = null;
+    document.getElementById("delete-modal").classList.remove("visible");
+  }
+
+  async function confirmDelete() {
+    if (!pendingDeleteId) return;
+    const id = pendingDeleteId;
+    closeDeleteModal();
+    const { error } = await db.from("entries").delete().eq("id", id);
+    if (error) { setSyncStatus("err", "✕ błąd usuwania"); return; }
+    entries = entries.filter(e => e.id !== id);
+    setSyncStatus("ok", "✓ usunięto");
+    renderEntries();
+  }
+
+  document.getElementById("delete-modal").addEventListener("click", function(e) {
+    if (e.target === this) closeDeleteModal();
+  });
+
+  // ── RENDER ──
+  function formatTime(iso) {
+    return new Date(iso).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
+  }
+
+  function dayKey(iso) {
+    return new Date(iso).toLocaleDateString("pl-PL", { weekday: "long", day: "numeric", month: "long" });
+  }
+
+  function renderEntries() {
+    const container = document.getElementById("entries-list");
+    if (entries.length === 0) {
+      container.innerHTML = '<div class="empty">Brak wpisów — zacznij od wpisania ilości mleka 👆</div>';
+      return;
+    }
+    const groups = {};
+    entries.forEach(e => {
+      const k = dayKey(e.timestamp);
+      if (!groups[k]) groups[k] = [];
+      groups[k].push(e);
+    });
+    let html = "";
+    Object.entries(groups).forEach(([dateKey, dayEntries]) => {
+      html += `<div class="date-header">${dateKey}</div>`;
+      dayEntries.forEach(entry => {
+        html += `<div class="entry-row">
+          <div class="entry-time">${formatTime(entry.timestamp)}</div>
+          <div class="entry-details">
+            ${entry.mleko != null ? `<span class="chip">🍼 ${entry.mleko} ml</span>` : ""}
+            ${entry.siku ? `<span class="chip-blue">💧 Siku</span>` : ""}
+            ${entry.kupka ? `<span class="chip-brown">💩 Kupka</span>` : ""}
+          </div>
+          <button class="delete-btn" onclick="deleteEntry(${entry.id})">✕</button>
+        </div>`;
+      });
+      const totalMleko = dayEntries.reduce((s, e) => s + (e.mleko || 0), 0);
+      const totalSiku = dayEntries.filter(e => e.siku).length;
+      const totalKupka = dayEntries.filter(e => e.kupka).length;
+      html += `<div class="summary">Suma: ${totalMleko} ml · ${totalSiku}× 💧 · ${totalKupka}× 💩</div>`;
+    });
+    container.innerHTML = html;
+  }
+
+  // ── INPUT HANDLERS ──
+  const mlekoInput = document.getElementById("mleko-input");
+
+  mlekoInput.addEventListener("focus", () => {
+    if (!pendingTimestamp) { pendingTimestamp = new Date().toISOString(); updateAutoDate(); }
+    updateAddBtn();
+  });
+
+  mlekoInput.addEventListener("input", () => {
+    mlekoInput.value = mlekoInput.value.replace(/[^0-9]/g, "");
+    if (mlekoInput.value && !pendingTimestamp) { pendingTimestamp = new Date().toISOString(); updateAutoDate(); }
+    updateAddBtn();
+  });
+
+  function updateAutoDate() {
+    const el = document.getElementById("auto-date");
+    if (pendingTimestamp) {
+      const d = new Date(pendingTimestamp);
+      const days = ["Nd","Pn","Wt","Śr","Cz","Pt","So"];
+      const dateStr = d.toLocaleDateString("pl-PL", { day: "2-digit", month: "2-digit" });
+      const timeStr = d.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
+      el.textContent = `📅 ${days[d.getDay()]} ${dateStr} ${timeStr}`;
+      el.classList.add("visible");
+    } else {
+      el.classList.remove("visible");
+    }
+  }
+
+  function updateAddBtn() {
+    document.getElementById("add-btn").disabled = !mlekoInput.value && !sikuOn && !kupkaOn;
+  }
+
+  function toggleSiku() {
+    sikuOn = !sikuOn;
+    const btn = document.getElementById("siku-btn");
+    btn.className = "toggle" + (sikuOn ? " on-blue" : "");
+    btn.textContent = sikuOn ? "💧 Siku ✓" : "💧 Siku";
+    if (sikuOn && !pendingTimestamp) { pendingTimestamp = new Date().toISOString(); updateAutoDate(); }
+    updateAddBtn();
+  }
+
+  function toggleKupka() {
+    kupkaOn = !kupkaOn;
+    const btn = document.getElementById("kupka-btn");
+    btn.className = "toggle" + (kupkaOn ? " on-brown" : "");
+    btn.textContent = kupkaOn ? "💩 Kupka ✓" : "💩 Kupka";
+    if (kupkaOn && !pendingTimestamp) { pendingTimestamp = new Date().toISOString(); updateAutoDate(); }
+    updateAddBtn();
+  }
+
+  // ── LOGIN ENTER KEY ──
+  document.getElementById("login-email").addEventListener("keydown", e => {
+    if (e.key === "Enter") document.getElementById("login-password").focus();
+  });
+  document.getElementById("login-password").addEventListener("keydown", e => {
+    if (e.key === "Enter") signIn();
+  });
+
+  // ── INIT ──
+  init();
+</script>
+
+</body>
+</html>
